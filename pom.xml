@@ -102,10 +102,22 @@
     <dependencies>
         <dependency>
             <groupId>org.spout</groupId>
-            <artifactId>caustic</artifactId>
+            <artifactId>caustic-api</artifactId>
             <version>1.0.0-SNAPSHOT</version>
             <scope>compile</scope>
         </dependency>
+        <dependency>
+            <groupId>org.spout</groupId>
+            <artifactId>caustic-lwjgl</artifactId>
+            <version>1.0.0-SNAPSHOT</version>
+            <scope>compile</scope>
+        </dependency>
+		<dependency>
+			<groupId>com.flowpowered</groupId>
+			<artifactId>flow-commons</artifactId>
+			<version>0.1.0-SNAPSHOT</version>
+			<scope>compile</scope>
+		</dependency>
         <!-- Testing only -->
         <dependency>
             <groupId>junit</groupId>
