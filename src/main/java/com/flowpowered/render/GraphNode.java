@@ -21,30 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-/**
- * This file is part of Client, licensed under the MIT License (MIT).
- *
- * Copyright (c) 2013-2014 Spoutcraft <http://spoutcraft.org/>
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
-package com.flowpowered.render.node;
+package com.flowpowered.render;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -56,16 +33,15 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import com.flowpowered.render.RenderGraph;
-
 import org.spout.renderer.api.gl.Texture;
 
 /**
  *
  */
-public abstract class GraphNode {
+public abstract class GraphNode implements AttributeHolder {
     protected final RenderGraph graph;
     protected final String name;
+    private final Map<String, Object> attributes = new HashMap<>();
     private final Map<String, Method> inputs = new HashMap<>();
     private final Map<String, Method> outputs = new HashMap<>();
     private final Map<String, GraphNode> inputNodes = new HashMap<>();
@@ -77,12 +53,41 @@ public abstract class GraphNode {
         findInputsAndOutputs();
     }
 
-    public abstract void render();
+    protected abstract void update();
 
-    public abstract void destroy();
+    protected abstract void render();
+
+    protected abstract void destroy();
 
     public String getName() {
         return name;
+    }
+
+    @Override
+    public void setAttribute(String name, Object value) {
+        attributes.put(name, value);
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T> T getAttribute(String name) {
+        Object attribute = attributes.get(name);
+        if (attribute == null) {
+            attribute = graph.getAttributeRaw(name);
+        }
+        if (attribute == null) {
+            throw new IllegalArgumentException("Attribute \"" + name + "\" is missing or null");
+        }
+        try {
+            return (T) attribute;
+        } catch (ClassCastException e) {
+            throw new IllegalArgumentException("Requested attribute is not of requested type");
+        }
+    }
+
+    @Override
+    public void removeAttribute(String name) {
+        attributes.remove(name);
     }
 
     public Set<String> getInputs() {
@@ -161,10 +166,5 @@ public abstract class GraphNode {
     @Target({ElementType.METHOD})
     public static @interface Output {
         String value();
-    }
-
-    @Retention(RetentionPolicy.RUNTIME)
-    @Target({ElementType.METHOD})
-    public static @interface Setting {
     }
 }

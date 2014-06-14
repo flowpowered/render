@@ -21,34 +21,10 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-/**
- * This file is part of Client, licensed under the MIT License (MIT).
- *
- * Copyright (c) 2013-2014 Spoutcraft <http://spoutcraft.org/>
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
-package com.flowpowered.render.node;
+package com.flowpowered.render.impl;
 
 import java.util.Arrays;
 
-import com.flowpowered.commons.ViewFrustum;
 import com.flowpowered.math.imaginary.Quaternionf;
 import com.flowpowered.math.matrix.Matrix3f;
 import com.flowpowered.math.matrix.Matrix4f;
@@ -135,33 +111,24 @@ public class CascadedShadowMappingNode extends ShadowMappingNode {
     }
 
     @Override
-    public void destroy() {
-        lightDepthsTexture2.destroy();
-        lightDepthsTexture3.destroy();
-        depthFrameBuffer2.destroy();
-        depthFrameBuffer3.destroy();
-        super.destroy();
+    protected void update() {
+        super.update();
     }
 
     @Override
-    public void render() {
-        lightViewMatrixUniform2.set(camera2.getViewMatrix());
-        lightViewMatrixUniform3.set(camera3.getViewMatrix());
-        lightProjectionMatrixUniform2.set(camera2.getProjectionMatrix());
-        lightProjectionMatrixUniform3.set(camera3.getProjectionMatrix());
-        super.render();
-    }
-
-    @Setting
-    @Override
-    public void setShadowMapSize(Vector2i size) {
-        super.setShadowMapSize(size);
+    protected void updateShadowMapSize(Vector2i size) {
+        if (size.getX() == shadowMapSize.getWidth() && size.getY() == shadowMapSize.getHeight()) {
+            return;
+        }
+        shadowMapSize.setSize(size);
+        lightDepthsTexture.setImageData(null, size.getX(), size.getY());
         lightDepthsTexture2.setImageData(null, size.getX(), size.getY());
         lightDepthsTexture3.setImageData(null, size.getX(), size.getY());
     }
 
     @Override
-    public void updateLight(Vector3f direction, ViewFrustum frustum) {
+    protected void updateLight(Vector3f direction, Camera camera) {
+        frustum.update(camera.getProjectionMatrix(), camera.getViewMatrix());
         // Set the direction uniform
         direction = direction.normalize();
         lightDirectionUniform.set(direction);
@@ -195,7 +162,7 @@ public class CascadedShadowMappingNode extends ShadowMappingNode {
         slice1Vertices[5] = slice1Vertices[5].sub(slice1Vertices[4]).mul(slice1).add(slice1Vertices[4]);
         slice1Vertices[7] = slice1Vertices[7].sub(slice1Vertices[6]).mul(slice1).add(slice1Vertices[6]);
         // Calculate the new camera bounds so that the box is fully included in those bounds
-        fitFrustum(camera, position, rotation, slice1Vertices);
+        fitFrustum(this.camera, position, rotation, slice1Vertices);
         // Rescale the vertices for the third slice
         slice3Vertices[0] = slice3Vertices[0].sub(slice3Vertices[1]).mul(1 - slice2).add(slice3Vertices[1]);
         slice3Vertices[2] = slice3Vertices[2].sub(slice3Vertices[3]).mul(1 - slice2).add(slice3Vertices[3]);
@@ -214,6 +181,24 @@ public class CascadedShadowMappingNode extends ShadowMappingNode {
         vertices[7] = slice3Vertices[6];
         // Calculate the new camera bounds so that the box is fully included in those bounds
         fitFrustum(camera2, position, rotation, vertices);
+    }
+
+    @Override
+    protected void render() {
+        lightViewMatrixUniform2.set(camera2.getViewMatrix());
+        lightViewMatrixUniform3.set(camera3.getViewMatrix());
+        lightProjectionMatrixUniform2.set(camera2.getProjectionMatrix());
+        lightProjectionMatrixUniform3.set(camera3.getProjectionMatrix());
+        super.render();
+    }
+
+    @Override
+    protected void destroy() {
+        lightDepthsTexture2.destroy();
+        lightDepthsTexture3.destroy();
+        depthFrameBuffer2.destroy();
+        depthFrameBuffer3.destroy();
+        super.destroy();
     }
 
     private static void fitFrustum(Camera camera, Vector3f position, Quaternionf rotation, Vector3f[] frustum) {

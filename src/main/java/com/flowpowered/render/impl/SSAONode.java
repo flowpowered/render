@@ -21,30 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-/**
- * This file is part of Client, licensed under the MIT License (MIT).
- *
- * Copyright (c) 2013-2014 Spoutcraft <http://spoutcraft.org/>
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
-package com.flowpowered.render.node;
+package com.flowpowered.render.impl;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -55,8 +32,11 @@ import com.flowpowered.math.TrigMath;
 import com.flowpowered.math.vector.Vector2f;
 import com.flowpowered.math.vector.Vector2i;
 import com.flowpowered.math.vector.Vector3f;
+import com.flowpowered.render.GraphNode;
 import com.flowpowered.render.RenderGraph;
+import com.flowpowered.render.RenderUtil;
 
+import org.spout.renderer.api.Camera;
 import org.spout.renderer.api.Material;
 import org.spout.renderer.api.Pipeline;
 import org.spout.renderer.api.Pipeline.PipelineBuilder;
@@ -130,35 +110,32 @@ public class SSAONode extends GraphNode {
     }
 
     @Override
-    public void destroy() {
-        noiseTexture.destroy();
-        frameBuffer.destroy();
-        occlusionsOutput.destroy();
+    protected void update() {
+        updateCamera(this.<Camera>getAttribute("camera"));
+        updateKernelSize(this.<Integer>getAttribute("kernelSize"), this.<Float>getAttribute("threshold"));
+        updateRadius(this.<Float>getAttribute("radius"));
+        updateNoiseSize(this.<Integer>getAttribute("noiseSize"));
+        updatePower(this.<Float>getAttribute("power"));
+        updateOutputSize(this.<Vector2i>getAttribute("outputSize"));
     }
 
-    @Override
-    public void render() {
-        pipeline.run(graph.getContext());
-    }
-
-    @Setting
-    public void setFieldOfView(float fieldOfView) {
-        tanHalfFOVUniform.set(TrigMath.tan(Math.toRadians(fieldOfView) / 2));
-    }
-
-    @Setting
-    public void setPlanes(Vector2f planes) {
+    private void updateCamera(Camera camera) {
+        // Update the field of view
+        tanHalfFOVUniform.set(TrigMath.tan(RenderUtil.getFieldOfView(camera) / 2));
+        // Update the planes
+        final Vector2f planes = RenderUtil.getPlanes(camera);
         final float nearPlane = planes.getX();
         final float farPlane = planes.getY();
         projectionUniform.set(new Vector2f(farPlane / (farPlane - nearPlane), (-farPlane * nearPlane) / (farPlane - nearPlane)));
     }
 
-    @Setting
-    public void setKernelSize(int kernelSize) {
+    private void updateKernelSize(int kernelSize, float threshold) {
+        if (kernelSize == kernelSizeUniform.get() && threshold == thresholdUniform.get()) {
+            return;
+        }
         // Generate the kernel
         final Vector3f[] kernel = new Vector3f[kernelSize];
         final Random random = new Random();
-        final float threshold = thresholdUniform.get();
         for (int i = 0; i < kernelSize; i++) {
             float scale = (float) i / kernelSize;
             scale = GenericMath.lerp(threshold, 1, scale * scale);
@@ -169,24 +146,17 @@ public class SSAONode extends GraphNode {
         // Update the uniforms
         kernelSizeUniform.set(kernelSize);
         kernelUniform.set(kernel);
+        thresholdUniform.set(threshold);
     }
 
-    @Setting
-    public void setThreshold(float threshold) {
-        if (threshold != thresholdUniform.get()) {
-            thresholdUniform.set(threshold);
-            // Recompute the kernel
-            setKernelSize(kernelSizeUniform.get());
-        }
-    }
-
-    @Setting
-    public void setRadius(float radius) {
+    private void updateRadius(float radius) {
         radiusUniform.set(radius);
     }
 
-    @Setting
-    public void setNoiseSize(int noiseSize) {
+    private void updateNoiseSize(int noiseSize) {
+        if (noiseSize == noiseTexture.getWidth()) {
+            return;
+        }
         // Generate the noise texture data
         final Random random = new Random();
         final int noiseTextureSize = noiseSize * noiseSize;
@@ -207,9 +177,29 @@ public class SSAONode extends GraphNode {
         noiseTexture.setImageData(noiseTextureBuffer, noiseSize, noiseSize);
     }
 
-    @Setting
-    public void setPower(float power) {
+    private void updatePower(float power) {
         powerUniform.set(power);
+    }
+
+    private void updateOutputSize(Vector2i size) {
+        if (size.getX() == outputSize.getWidth() && size.getY() == outputSize.getHeight()) {
+            return;
+        }
+        outputSize.setSize(size);
+        occlusionsOutput.setImageData(null, size.getX(), size.getY());
+        noiseScaleUniform.set(size.toFloat().div(noiseTexture.getWidth()));
+    }
+
+    @Override
+    protected void render() {
+        pipeline.run(graph.getContext());
+    }
+
+    @Override
+    protected void destroy() {
+        noiseTexture.destroy();
+        frameBuffer.destroy();
+        occlusionsOutput.destroy();
     }
 
     @Input("normals")
@@ -228,11 +218,5 @@ public class SSAONode extends GraphNode {
     @Output("occlusions")
     public Texture getOcclusionsOutput() {
         return occlusionsOutput;
-    }
-
-    @Setting
-    public void setOcclusionsSize(Vector2i size) {
-        outputSize.setSize(size);
-        occlusionsOutput.setImageData(null, size.getX(), size.getY());
     }
 }

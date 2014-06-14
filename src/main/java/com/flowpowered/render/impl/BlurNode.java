@@ -21,35 +21,13 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-/**
- * This file is part of Client, licensed under the MIT License (MIT).
- *
- * Copyright (c) 2013-2014 Spoutcraft <http://spoutcraft.org/>
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
-package com.flowpowered.render.node;
+package com.flowpowered.render.impl;
 
 import java.util.Arrays;
 
 import com.flowpowered.math.vector.Vector2f;
 import com.flowpowered.math.vector.Vector2i;
+import com.flowpowered.render.GraphNode;
 import com.flowpowered.render.RenderGraph;
 
 import org.spout.renderer.api.Material;
@@ -154,28 +132,27 @@ public class BlurNode extends GraphNode {
     }
 
     @Override
-    public void destroy() {
-        horizontalFrameBuffer.destroy();
-        verticalFrameBuffer.destroy();
-        intermediateTexture.destroy();
-        colorsOutput.destroy();
+    protected void update() {
+        updateKernelGenerator(this.<KernelGenerator>getAttribute("kernelGenerator"));
+        updateKernelSize(this.<Integer>getAttribute("kernelSize"));
+        updateOutputSize(this.<Vector2i>getAttribute("outputSize"));
     }
 
-    @Override
-    public void render() {
-        pipeline.run(graph.getContext());
+    private void updateKernelGenerator(KernelGenerator kernelGenerator) {
+        this.kernelGenerator = kernelGenerator;
     }
 
-    @Setting
-    public void setKernelSize(int kernelSize) {
+    private void updateKernelSize(int kernelSize) {
         if ((kernelSize & 1) == 0) {
             kernelSize--;
         }
         if (kernelSize <= 1) {
             throw new IllegalArgumentException("Kernel size must be at least 3");
         }
-        // Generate the kernel and offsets
         final int halfKernelSize = (kernelSize - 1) / 2 + 1;
+        if (halfKernelSize == halfKernelSizeUniform.get()) {
+            return;
+        }
         final float[] kernel = new float[halfKernelSize];
         final float[] offsets = new float[halfKernelSize];
         float weight0 = kernelGenerator.getWeight(0, kernelSize);
@@ -194,15 +171,30 @@ public class BlurNode extends GraphNode {
         for (int i = 0; i < halfKernelSize; i++) {
             kernel[i] /= sum;
         }
-        // Update the uniforms
         halfKernelSizeUniform.set(halfKernelSize);
         kernelUniform.set(kernel);
         offsetsUniform.set(offsets);
     }
 
-    @Setting
-    public void setKernelGenerator(KernelGenerator kernelGenerator) {
-        this.kernelGenerator = kernelGenerator;
+    private void updateOutputSize(Vector2i size) {
+        if (size.getX() == outputSize.getWidth() && size.getY() == outputSize.getHeight()) {
+            return;
+        }
+        colorsOutput.setImageData(null, size.getX(), size.getY());
+        outputSize.setSize(size);
+    }
+
+    @Override
+    protected void render() {
+        pipeline.run(graph.getContext());
+    }
+
+    @Override
+    protected void destroy() {
+        horizontalFrameBuffer.destroy();
+        verticalFrameBuffer.destroy();
+        intermediateTexture.destroy();
+        colorsOutput.destroy();
     }
 
     @Input("colors")
@@ -221,9 +213,12 @@ public class BlurNode extends GraphNode {
         if (formatDifferent) {
             colorsOutput.setFormat(format, internalFormat);
             intermediateTexture.setFormat(format, internalFormat);
-            // Update the intermidiate texture data for the new format
+            // Update the output texture data for the new format if needed
+            if (colorsOutput.getWidth() > 0 && colorsOutput.getHeight() > 0) {
+                colorsOutput.setImageData(null, colorsOutput.getWidth(), colorsOutput.getHeight());
+            }
+            // Update the intermediate texture data for the new format
             intermediateTexture.setImageData(null, size.getX(), size.getY());
-            // The update for the output texture is done in setColorSize, which should be called after this
         } else if (!intermediateTexture.getSize().equals(size)) {
             // Update the intermediate texture size
             intermediateTexture.setImageData(null, size.getX(), size.getY());
@@ -233,12 +228,6 @@ public class BlurNode extends GraphNode {
     @Output("colors")
     public Texture getColorsOutput() {
         return colorsOutput;
-    }
-
-    @Setting
-    public void setColorsSize(Vector2i size) {
-        colorsOutput.setImageData(null, size.getX(), size.getY());
-        outputSize.setSize(size);
     }
 
     public static interface KernelGenerator {

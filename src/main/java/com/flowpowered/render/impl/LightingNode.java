@@ -21,38 +21,18 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-/**
- * This file is part of Client, licensed under the MIT License (MIT).
- *
- * Copyright (c) 2013-2014 Spoutcraft <http://spoutcraft.org/>
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
-package com.flowpowered.render.node;
+package com.flowpowered.render.impl;
 
 import java.util.Arrays;
 
 import com.flowpowered.math.TrigMath;
 import com.flowpowered.math.vector.Vector2i;
 import com.flowpowered.math.vector.Vector3f;
+import com.flowpowered.render.GraphNode;
 import com.flowpowered.render.RenderGraph;
+import com.flowpowered.render.RenderUtil;
 
+import org.spout.renderer.api.Camera;
 import org.spout.renderer.api.Material;
 import org.spout.renderer.api.Pipeline;
 import org.spout.renderer.api.Pipeline.PipelineBuilder;
@@ -108,24 +88,37 @@ public class LightingNode extends GraphNode {
     }
 
     @Override
-    public void destroy() {
-        frameBuffer.destroy();
-        colorsOutput.destroy();
+    protected void update() {
+        updateCamera(this.<Camera>getAttribute("camera"));
+        updateLightDirection(this.<Vector3f>getAttribute("lightDirection"));
+        updateOutputSize(this.<Vector2i>getAttribute("outputSize"));
     }
 
-    @Override
-    public void render() {
-        pipeline.run(graph.getContext());
+    private void updateCamera(Camera camera) {
+        tanHalfFOVUniform.set(TrigMath.tan(RenderUtil.getFieldOfView(camera) / 2));
     }
 
-    @Setting
-    public void setLightDirection(Vector3f lightDirection) {
+    private void updateLightDirection(Vector3f lightDirection) {
         lightDirectionUniform.set(lightDirection);
     }
 
-    @Setting
-    public void setFieldOfView(float fieldOfView) {
-        tanHalfFOVUniform.set(TrigMath.tan(Math.toRadians(fieldOfView) / 2));
+    private void updateOutputSize(Vector2i size) {
+        if (size.getX() == outputSize.getWidth() && size.getY() == outputSize.getHeight()) {
+            return;
+        }
+        outputSize.setSize(size);
+        colorsOutput.setImageData(null, size.getX(), size.getY());
+    }
+
+    @Override
+    protected void render() {
+        pipeline.run(graph.getContext());
+    }
+
+    @Override
+    protected void destroy() {
+        frameBuffer.destroy();
+        colorsOutput.destroy();
     }
 
     @Input("colors")
@@ -168,11 +161,5 @@ public class LightingNode extends GraphNode {
     @Output("colors")
     public Texture getColorsOutput() {
         return colorsOutput;
-    }
-
-    @Setting
-    public void setColorsSize(Vector2i size) {
-        outputSize.setSize(size);
-        colorsOutput.setImageData(null, size.getX(), size.getY());
     }
 }

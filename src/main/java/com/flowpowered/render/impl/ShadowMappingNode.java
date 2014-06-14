@@ -21,30 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-/**
- * This file is part of Client, licensed under the MIT License (MIT).
- *
- * Copyright (c) 2013-2014 Spoutcraft <http://spoutcraft.org/>
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
-package com.flowpowered.render.node;
+package com.flowpowered.render.impl;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -59,7 +36,9 @@ import com.flowpowered.math.matrix.Matrix4f;
 import com.flowpowered.math.vector.Vector2f;
 import com.flowpowered.math.vector.Vector2i;
 import com.flowpowered.math.vector.Vector3f;
+import com.flowpowered.render.GraphNode;
 import com.flowpowered.render.RenderGraph;
+import com.flowpowered.render.RenderUtil;
 
 import org.spout.renderer.api.Action;
 import org.spout.renderer.api.Action.SetCameraAction;
@@ -89,7 +68,7 @@ import org.spout.renderer.api.util.Rectangle;
 
 public class ShadowMappingNode extends GraphNode {
     protected final Material material;
-    private final Texture lightDepthsTexture;
+    protected final Texture lightDepthsTexture;
     protected final Texture noiseTexture;
     protected final FrameBuffer depthFrameBuffer;
     protected final FrameBuffer frameBuffer;
@@ -112,6 +91,7 @@ public class ShadowMappingNode extends GraphNode {
     private final Vector2Uniform noiseScaleUniform = new Vector2Uniform("noiseScale", Vector2f.ONE);
     private final FloatUniform biasUniform = new FloatUniform("bias", 0.005f);
     private final FloatUniform radiusUniform = new FloatUniform("radius", 0.0004f);
+    protected final ViewFrustum frustum = new ViewFrustum();
 
     public ShadowMappingNode(RenderGraph graph, String name) {
         // Initialize a normal shadow mapping node
@@ -174,42 +154,41 @@ public class ShadowMappingNode extends GraphNode {
     }
 
     @Override
-    public void destroy() {
-        lightDepthsTexture.destroy();
-        noiseTexture.destroy();
-        depthFrameBuffer.destroy();
-        frameBuffer.destroy();
-        shadowsOutput.destroy();
+    protected void update() {
+        final Camera camera = getAttribute("camera");
+        updateCamera(camera);
+        updateShadowMapSize(this.<Vector2i>getAttribute("shadowMapSize"));
+        updateKernelSize(this.<Integer>getAttribute("kernelSize"));
+        updateRadius(this.<Float>getAttribute("radius"));
+        updateBias(this.<Float>getAttribute("bias"));
+        updateNoiseSize(this.<Integer>getAttribute("noiseSize"));
+        updateOutputSize(this.<Vector2i>getAttribute("outputSize"));
+        updateRenderModelsNode(this.<RenderModelsNode>getAttribute("renderModelsNode"));
+        updateLight(this.<Vector3f>getAttribute("lightDirection"), camera);
     }
 
-    @Override
-    public void render() {
-        inverseViewMatrixUniform.set(setCameraAction.getCamera().getViewMatrix().invert());
-        lightViewMatrixUniform.set(camera.getViewMatrix());
-        lightProjectionMatrixUniform.set(camera.getProjectionMatrix());
-        pipeline.run(graph.getContext());
-    }
-
-    @Setting
-    public void setFieldOfView(float fieldOfView) {
-        tanHalfFOVUniform.set(TrigMath.tan(Math.toRadians(fieldOfView) / 2));
-    }
-
-    @Setting
-    public void setPlanes(Vector2f planes) {
+    private void updateCamera(Camera camera) {
+        // Update the field of view
+        tanHalfFOVUniform.set(TrigMath.tan(RenderUtil.getFieldOfView(camera) / 2));
+        // Update the planes
+        final Vector2f planes = RenderUtil.getPlanes(camera);
         final float nearPlane = planes.getX();
         final float farPlane = planes.getY();
         projectionUniform.set(new Vector2f(farPlane / (farPlane - nearPlane), (-farPlane * nearPlane) / (farPlane - nearPlane)));
     }
 
-    @Setting
-    public void setShadowMapSize(Vector2i size) {
+    protected void updateShadowMapSize(Vector2i size) {
+        if (size.getX() == shadowMapSize.getWidth() && size.getY() == shadowMapSize.getHeight()) {
+            return;
+        }
         lightDepthsTexture.setImageData(null, size.getX(), size.getY());
         shadowMapSize.setSize(size);
     }
 
-    @Setting
-    public void setKernelSize(int kernelSize) {
+    private void updateKernelSize(int kernelSize) {
+        if (kernelSize == kernelSizeUniform.get()) {
+            return;
+        }
         // Generate the kernel
         final Vector2f[] kernel = new Vector2f[kernelSize];
         final Random random = new Random();
@@ -222,18 +201,18 @@ public class ShadowMappingNode extends GraphNode {
         kernelUniform.set(kernel);
     }
 
-    @Setting
-    public void setRadius(float radius) {
+    private void updateRadius(float radius) {
         radiusUniform.set(radius);
     }
 
-    @Setting
-    public void setBias(float bias) {
+    private void updateBias(float bias) {
         biasUniform.set(bias);
     }
 
-    @Setting
-    public void setNoiseSize(int noiseSize) {
+    private void updateNoiseSize(int noiseSize) {
+        if (noiseSize == noiseTexture.getWidth()) {
+            return;
+        }
         // Generate the noise texture data
         final Random random = new Random();
         final int noiseTextureSize = noiseSize * noiseSize;
@@ -253,13 +232,28 @@ public class ShadowMappingNode extends GraphNode {
         noiseTexture.setImageData(noiseTextureBuffer, noiseSize, noiseSize);
     }
 
+    private void updateOutputSize(Vector2i size) {
+        if (size.getX() == outputSize.getWidth() && size.getY() == outputSize.getHeight()) {
+            return;
+        }
+        shadowsOutput.setImageData(null, size.getX(), size.getY());
+        outputSize.setSize(size);
+        noiseScaleUniform.set(size.toFloat().div(noiseTexture.getWidth()));
+    }
+
+    private void updateRenderModelsNode(RenderModelsNode node) {
+        renderModelsAction.setModels(node.getModels());
+        setCameraAction.setCamera(node.getCamera());
+    }
+
     /**
-     * Updates the light direction and camera bounds to ensure that shadows are casted inside the frustum.
+     * Updates the light direction and camera bounds to ensure that shadows are casted inside the camera's frustum.
      *
      * @param direction The light direction
-     * @param frustum The frustum in which to cast shadows
+     * @param camera The camera in which to cast shadows
      */
-    public void updateLight(Vector3f direction, ViewFrustum frustum) {
+    protected void updateLight(Vector3f direction, Camera camera) {
+        frustum.update(camera.getProjectionMatrix(), camera.getViewMatrix());
         // Set the direction uniform
         direction = direction.normalize();
         lightDirectionUniform.set(direction);
@@ -280,21 +274,36 @@ public class ShadowMappingNode extends GraphNode {
         final Vector3f p6 = axisAlignTransform.transform(vertices[6].sub(position));
         final Vector3f p7 = axisAlignTransform.transform(vertices[7].sub(position));
         // Calculate the new camera bounds so that the box is fully included in those bounds
-        final Vector3f low = p0.min(p1).min(p2).min(p3)
-                .min(p4).min(p5).min(p6).min(p7);
-        final Vector3f high = p0.max(p1).max(p2).max(p3)
-                .max(p4).max(p5).max(p6).max(p7);
+        final Vector3f low = p0.min(p1).min(p2).min(p3).min(p4).min(p5).min(p6).min(p7);
+        final Vector3f high = p0.max(p1).max(p2).max(p3).max(p4).max(p5).max(p6).max(p7);
         // Calculate the size of the new camera bounds
         final Vector3f size = high.sub(low).div(2);
         final Vector3f mid = low.add(size);
         // Compute the camera position
         position = Matrix3f.createRotation(rotation).transform(mid).add(position);
         // Update the camera position
-        camera.setPosition(position);
+        this.camera.setPosition(position);
         // Update the camera rotation
-        camera.setRotation(rotation);
+        this.camera.setRotation(rotation);
         // Update the camera size
-        camera.setProjection(Matrix4f.createOrthographic(size.getX(), -size.getX(), size.getY(), -size.getY(), -size.getZ(), size.getZ()));
+        this.camera.setProjection(Matrix4f.createOrthographic(size.getX(), -size.getX(), size.getY(), -size.getY(), -size.getZ(), size.getZ()));
+    }
+
+    @Override
+    protected void render() {
+        inverseViewMatrixUniform.set(setCameraAction.getCamera().getViewMatrix().invert());
+        lightViewMatrixUniform.set(camera.getViewMatrix());
+        lightProjectionMatrixUniform.set(camera.getProjectionMatrix());
+        pipeline.run(graph.getContext());
+    }
+
+    @Override
+    protected void destroy() {
+        lightDepthsTexture.destroy();
+        noiseTexture.destroy();
+        depthFrameBuffer.destroy();
+        frameBuffer.destroy();
+        shadowsOutput.destroy();
     }
 
     @Input("normals")
@@ -313,18 +322,6 @@ public class ShadowMappingNode extends GraphNode {
     @Output("shadows")
     public Texture getShadowsOutput() {
         return shadowsOutput;
-    }
-
-    @Setting
-    public void setShadowsSize(Vector2i size) {
-        shadowsOutput.setImageData(null, size.getX(), size.getY());
-        outputSize.setSize(size);
-    }
-
-    @Setting
-    public void setRenderModelsNode(RenderModelsNode node) {
-        renderModelsAction.setModels(node.getModels());
-        setCameraAction.setCamera(node.getCamera());
     }
 
     protected class RenderShadowModelsAction extends Action {

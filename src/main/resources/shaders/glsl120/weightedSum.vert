@@ -21,7 +21,7 @@ uniform mat4 projectionMatrix;
 void main() {
     normalView = (normalMatrix * vec4(normal, 0)).xyz;
 
-    lightDirectionView = (normalMatrix * vec4(lightDirection, 0)).xyz;
+    lightDirectionView = (viewMatrix * vec4(lightDirection, 0)).xyz;
 
     positionView = (viewMatrix * modelMatrix * vec4(position, 1)).xyz;
 
