@@ -23,18 +23,17 @@
  */
 package com.flowpowered.render.impl;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Collection;
 
 import com.flowpowered.math.vector.Vector2i;
 import com.flowpowered.render.GraphNode;
 import com.flowpowered.render.RenderGraph;
 
+import org.spout.renderer.api.Action.RenderModelsAction;
 import org.spout.renderer.api.Action.SetCameraAction;
 import org.spout.renderer.api.Camera;
 import org.spout.renderer.api.Pipeline;
 import org.spout.renderer.api.Pipeline.PipelineBuilder;
-import org.spout.renderer.api.data.Uniform.Matrix4Uniform;
 import org.spout.renderer.api.gl.Context;
 import org.spout.renderer.api.gl.FrameBuffer;
 import org.spout.renderer.api.gl.FrameBuffer.AttachmentPoint;
@@ -55,7 +54,7 @@ public class RenderModelsNode extends GraphNode {
     private final Texture depthsOutput;
     private final Texture vertexNormalsOutput;
     private final Texture materialsOutput;
-    private final List<Model> models = new ArrayList<>();
+    private final RenderModelsAction renderModels = new RenderModelsAction(null);
     private final SetCameraAction setCamera = new SetCameraAction(null);
     private final Rectangle outputSize = new Rectangle();
     private final Pipeline pipeline;
@@ -99,13 +98,14 @@ public class RenderModelsNode extends GraphNode {
         frameBuffer.attach(AttachmentPoint.COLOR3, materialsOutput);
         frameBuffer.attach(AttachmentPoint.DEPTH, depthsOutput);
         // Create the pipeline
-        pipeline = new PipelineBuilder().doAction(setCamera).useViewPort(outputSize).bindFrameBuffer(frameBuffer).clearBuffer().renderModels(models).unbindFrameBuffer(frameBuffer).build();
+        pipeline = new PipelineBuilder().doAction(setCamera).useViewPort(outputSize).bindFrameBuffer(frameBuffer).clearBuffer().doAction(renderModels).unbindFrameBuffer(frameBuffer).build();
     }
 
     @Override
-    protected void update() {
+    public void update() {
         updateCamera(this.<Camera>getAttribute("camera"));
         updateOutputSize(this.<Vector2i>getAttribute("outputSize"));
+        updateModels(this.<Collection<Model>>getAttribute("models"));
     }
 
     private void updateCamera(Camera camera) {
@@ -124,6 +124,10 @@ public class RenderModelsNode extends GraphNode {
         depthsOutput.setImageData(null, width, height);
         vertexNormalsOutput.setImageData(null, width, height);
         materialsOutput.setImageData(null, width, height);
+    }
+
+    private void updateModels(Collection<Model> models) {
+        renderModels.setModels(models);
     }
 
     @Override
@@ -164,39 +168,5 @@ public class RenderModelsNode extends GraphNode {
     @Output("materials")
     public Texture getMaterialsOutput() {
         return materialsOutput;
-    }
-
-    public Camera getCamera() {
-        return setCamera.getCamera();
-    }
-
-    /**
-     * Adds a model to the renderer.
-     *
-     * @param model The model to add
-     */
-    public void addModel(Model model) {
-        model.getUniforms().add(new Matrix4Uniform("previousModelMatrix", model.getMatrix()));
-        models.add(model);
-    }
-
-    /**
-     * Removes a model from the renderer.
-     *
-     * @param model The model to remove
-     */
-    public void removeModel(Model model) {
-        models.remove(model);
-    }
-
-    /**
-     * Removes all the models from the renderer.
-     */
-    public void clearModels() {
-        models.clear();
-    }
-
-    public List<Model> getModels() {
-        return models;
     }
 }

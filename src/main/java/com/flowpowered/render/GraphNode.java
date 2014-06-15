@@ -53,7 +53,7 @@ public abstract class GraphNode implements AttributeHolder {
         findInputsAndOutputs();
     }
 
-    protected abstract void update();
+    public abstract void update();
 
     protected abstract void render();
 

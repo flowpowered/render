@@ -88,7 +88,7 @@ public class LightingNode extends GraphNode {
     }
 
     @Override
-    protected void update() {
+    public void update() {
         updateCamera(this.<Camera>getAttribute("camera"));
         updateLightDirection(this.<Vector3f>getAttribute("lightDirection"));
         updateOutputSize(this.<Vector2i>getAttribute("outputSize"));

@@ -111,7 +111,7 @@ public class CascadedShadowMappingNode extends ShadowMappingNode {
     }
 
     @Override
-    protected void update() {
+    public void update() {
         super.update();
     }
 

@@ -154,7 +154,7 @@ public class ShadowMappingNode extends GraphNode {
     }
 
     @Override
-    protected void update() {
+    public void update() {
         final Camera camera = getAttribute("camera");
         updateCamera(camera);
         updateShadowMapSize(this.<Vector2i>getAttribute("shadowMapSize"));
@@ -163,7 +163,7 @@ public class ShadowMappingNode extends GraphNode {
         updateBias(this.<Float>getAttribute("bias"));
         updateNoiseSize(this.<Integer>getAttribute("noiseSize"));
         updateOutputSize(this.<Vector2i>getAttribute("outputSize"));
-        updateRenderModelsNode(this.<RenderModelsNode>getAttribute("renderModelsNode"));
+        updateModels(this.<Collection<Model>>getAttribute("models"));
         updateLight(this.<Vector3f>getAttribute("lightDirection"), camera);
     }
 
@@ -241,9 +241,8 @@ public class ShadowMappingNode extends GraphNode {
         noiseScaleUniform.set(size.toFloat().div(noiseTexture.getWidth()));
     }
 
-    private void updateRenderModelsNode(RenderModelsNode node) {
-        renderModelsAction.setModels(node.getModels());
-        setCameraAction.setCamera(node.getCamera());
+    private void updateModels(Collection<Model> models) {
+        renderModelsAction.setModels(models);
     }
 
     /**
@@ -347,9 +346,8 @@ public class ShadowMappingNode extends GraphNode {
             program.setUniform("projectionMatrix", camera.getProjectionMatrix());
             program.setUniform("viewMatrix", camera.getViewMatrix());
             for (Model model : models) {
-                // Upload the model and normal matrices
+                // Upload the model matrix
                 program.setUniform("modelMatrix", model.getMatrix());
-                program.setUniform("normalMatrix", camera.getViewMatrix().mul(model.getMatrix()).invert().transpose());
                 // Render the model
                 model.render();
             }

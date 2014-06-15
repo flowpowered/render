@@ -131,18 +131,26 @@
     <build>
         <defaultGoal>clean install</defaultGoal>
 
-        <!-- Resources to include -->
-        <resources>
-            <!-- Static resources -->
-            <resource>
-                <filtering>false</filtering>
-                <directory>.</directory>
-                <targetPath>.</targetPath>
-                <includes>
-                    <include>LICENSE.txt</include>
-                </includes>
-            </resource>
-        </resources>
+		<!-- Resources to include -->
+		<resources>
+			<!-- Static resources -->
+			<resource>
+				<filtering>false</filtering>
+				<directory>.</directory>
+				<targetPath>.</targetPath>
+				<includes>
+					<include>LICENSE.txt</include>
+				</includes>
+			</resource>
+			<resource>
+				<filtering>false</filtering>
+				<directory>src/main/resources</directory>
+				<targetPath>.</targetPath>
+				<includes>
+					<include>**/*</include>
+				</includes>
+			</resource>
+		</resources>
 
         <!-- Build plugins -->
         <plugins>

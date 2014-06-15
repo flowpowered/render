@@ -110,7 +110,7 @@ public class SSAONode extends GraphNode {
     }
 
     @Override
-    protected void update() {
+    public void update() {
         updateCamera(this.<Camera>getAttribute("camera"));
         updateKernelSize(this.<Integer>getAttribute("kernelSize"), this.<Float>getAttribute("threshold"));
         updateRadius(this.<Float>getAttribute("radius"));

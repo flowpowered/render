@@ -23,21 +23,18 @@
  */
 package com.flowpowered.render.impl;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
+import java.util.Collection;
 
-import com.flowpowered.math.vector.Vector2f;
 import com.flowpowered.render.GraphNode;
 import com.flowpowered.render.RenderGraph;
-import com.flowpowered.render.RenderUtil;
 
+import org.spout.renderer.api.Action.RenderModelsAction;
 import org.spout.renderer.api.Action.SetCameraAction;
 import org.spout.renderer.api.Camera;
 import org.spout.renderer.api.Material;
 import org.spout.renderer.api.Pipeline;
 import org.spout.renderer.api.Pipeline.PipelineBuilder;
-import org.spout.renderer.api.data.Uniform.Matrix4Uniform;
 import org.spout.renderer.api.gl.Texture;
 import org.spout.renderer.api.model.Model;
 import org.spout.renderer.api.util.Rectangle;
@@ -48,7 +45,7 @@ import org.spout.renderer.api.util.Rectangle;
 public class RenderGUINode extends GraphNode {
     private final Material material;
     private final SetCameraAction setCamera = new SetCameraAction(null);
-    private final List<Model> models = new ArrayList<>();
+    private final RenderModelsAction renderModels = new RenderModelsAction(null);
     private final Pipeline pipeline;
     private final Rectangle inputSize = new Rectangle();
 
@@ -56,17 +53,16 @@ public class RenderGUINode extends GraphNode {
         super(graph, name);
         material = new Material(graph.getProgram("screen"));
         final Model model = new Model(graph.getScreen(), material);
-        pipeline = new PipelineBuilder().doAction(setCamera).useViewPort(inputSize).clearBuffer().renderModels(Arrays.asList(model)).renderModels(models).build();
+        pipeline = new PipelineBuilder().doAction(setCamera).useViewPort(inputSize).clearBuffer().renderModels(Arrays.asList(model)).doAction(renderModels).build();
     }
 
     @Override
-    protected void update() {
-        updateCamera(this.<Camera>getAttribute("camera"));
+    public void update() {
+        updateModels(this.<Collection<Model>>getAttribute("guiModels"));
     }
 
-    private void updateCamera(Camera camera) {
-        final Vector2f planes = RenderUtil.getPlanes(camera);
-        setCamera.setCamera(Camera.createOrthographic(1, 0, (float) inputSize.getHeight() / inputSize.getWidth(), 0, planes.getX(), planes.getY()));
+    private void updateModels(Collection<Model> models) {
+        renderModels.setModels(models);
     }
 
     @Override
@@ -82,41 +78,10 @@ public class RenderGUINode extends GraphNode {
     public void setColorsInput(Texture colorsInput) {
         material.addTexture(0, colorsInput);
         inputSize.setSize(colorsInput.getSize());
-        final Vector2f planes = RenderUtil.getPlanes(setCamera.getCamera());
-        setCamera.setCamera(Camera.createOrthographic(1, 0, (float) colorsInput.getHeight() / colorsInput.getWidth(), 0, planes.getX(), planes.getY()));
+        setCamera.setCamera(Camera.createOrthographic(1, 0, (float) colorsInput.getHeight() / colorsInput.getWidth(), 0, 0, 1));
     }
 
     public Camera getCamera() {
         return setCamera.getCamera();
-    }
-
-    /**
-     * Adds a model to the renderer.
-     *
-     * @param model The model to add
-     */
-    public void addModel(Model model) {
-        model.getUniforms().add(new Matrix4Uniform("previousModelMatrix", model.getMatrix()));
-        models.add(model);
-    }
-
-    /**
-     * Removes a model from the renderer.
-     *
-     * @param model The model to remove
-     */
-    public void removeModel(Model model) {
-        models.remove(model);
-    }
-
-    /**
-     * Removes all the models from the renderer.
-     */
-    public void clearModels() {
-        models.clear();
-    }
-
-    public List<Model> getModels() {
-        return models;
     }
 }

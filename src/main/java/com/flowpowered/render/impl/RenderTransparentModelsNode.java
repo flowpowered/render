@@ -23,14 +23,14 @@
  */
 package com.flowpowered.render.impl;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
+import java.util.Collection;
 
 import com.flowpowered.math.vector.Vector2i;
 import com.flowpowered.render.GraphNode;
 import com.flowpowered.render.RenderGraph;
 
+import org.spout.renderer.api.Action.RenderModelsAction;
 import org.spout.renderer.api.Action.SetCameraAction;
 import org.spout.renderer.api.Camera;
 import org.spout.renderer.api.Material;
@@ -56,7 +56,7 @@ public class RenderTransparentModelsNode extends GraphNode {
     private final FrameBuffer weightedSumFrameBuffer;
     private final FrameBuffer frameBuffer;
     private Texture colors;
-    private final List<Model> models = new ArrayList<>();
+    private final RenderModelsAction renderModels = new RenderModelsAction(null);
     private final SetCameraAction setCamera = new SetCameraAction(null);
     private final Rectangle outputSize = new Rectangle();
     private final Pipeline pipeline;
@@ -93,7 +93,7 @@ public class RenderTransparentModelsNode extends GraphNode {
                 .useViewPort(outputSize).doAction(setCamera)
                 .disableDepthMask().disableCapabilities(Capability.CULL_FACE).enableCapabilities(Capability.BLEND)
                 .setBlendingFunctions(BlendFunction.GL_ONE, BlendFunction.GL_ONE)
-                .bindFrameBuffer(weightedSumFrameBuffer).clearBuffer().renderModels(models)
+                .bindFrameBuffer(weightedSumFrameBuffer).clearBuffer().doAction(renderModels)
                 .enableCapabilities(Capability.CULL_FACE).enableDepthMask()
                 .setBlendingFunctions(BlendFunction.GL_ONE_MINUS_SRC_ALPHA, BlendFunction.GL_SRC_ALPHA)
                 .bindFrameBuffer(frameBuffer).renderModels(Arrays.asList(model)).unbindFrameBuffer(frameBuffer)
@@ -102,12 +102,17 @@ public class RenderTransparentModelsNode extends GraphNode {
     }
 
     @Override
-    protected void update() {
+    public void update() {
         updateCamera(this.<Camera>getAttribute("camera"));
+        updateModels(this.<Collection<Model>>getAttribute("transparentModels"));
     }
 
     private void updateCamera(Camera camera) {
         setCamera.setCamera(camera);
+    }
+
+    private void updateModels(Collection<Model> models) {
+        renderModels.setModels(models);
     }
 
     @Override
@@ -148,34 +153,5 @@ public class RenderTransparentModelsNode extends GraphNode {
     @Output("colors")
     public Texture getColorsOutput() {
         return colors;
-    }
-
-    /**
-     * Adds a model to the renderer.
-     *
-     * @param model The model to add
-     */
-    public void addModel(Model model) {
-        models.add(model);
-    }
-
-    /**
-     * Removes a model from the renderer.
-     *
-     * @param model The model to remove
-     */
-    public void removeModel(Model model) {
-        models.remove(model);
-    }
-
-    /**
-     * Removes all the models from the renderer.
-     */
-    public void clearModels() {
-        models.clear();
-    }
-
-    public List<Model> getModels() {
-        return models;
     }
 }

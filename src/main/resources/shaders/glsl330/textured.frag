@@ -6,8 +6,6 @@
 
 #version 330
 
-in vec4 positionClip;
-in vec4 previousPositionClip;
 in vec3 normalView;
 in vec2 textureUV;
 in mat3 tangentMatrix;
@@ -16,7 +14,6 @@ layout(location = 0) out vec4 outputColor;
 layout(location = 1) out vec4 outputNormal;
 layout(location = 2) out vec4 outputVertexNormal;
 layout(location = 3) out vec4 outputMaterial;
-layout(location = 4) out vec2 outputVelocity;
 
 uniform sampler2D diffuse;
 uniform sampler2D normals;
@@ -35,6 +32,4 @@ void main() {
 
     float specularIntensity = texture(specular, textureUV).r;
     outputMaterial = vec4(diffuseIntensity, specularIntensity, ambientIntensity, shininess);
-
-    outputVelocity = (positionClip.xy / positionClip.w - previousPositionClip.xy / previousPositionClip.w) * 0.5;
 }
