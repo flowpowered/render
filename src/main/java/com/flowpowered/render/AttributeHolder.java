@@ -29,7 +29,7 @@ package com.flowpowered.render;
 public interface AttributeHolder {
     void setAttribute(String name, Object value);
 
-    <T> T getAttribute(String name);
+    <T> T getAttribute(String name, T _default);
 
     void removeAttribute(String name);
 }

@@ -26,6 +26,7 @@ package com.flowpowered.render.impl;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Random;
 
 import com.flowpowered.commons.ViewFrustum;
@@ -154,17 +155,18 @@ public class ShadowMappingNode extends GraphNode {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public void update() {
         final Camera camera = getAttribute("camera");
         updateCamera(camera);
-        updateShadowMapSize(this.<Vector2i>getAttribute("shadowMapSize"));
-        updateKernelSize(this.<Integer>getAttribute("kernelSize"));
-        updateRadius(this.<Float>getAttribute("radius"));
-        updateBias(this.<Float>getAttribute("bias"));
-        updateNoiseSize(this.<Integer>getAttribute("noiseSize"));
+        updateShadowMapSize(getAttribute("shadowMapSize", new Vector2i(1024, 1024)));
+        updateKernelSize(getAttribute("kernelSize", 8));
+        updateRadius(getAttribute("radius", 0.05f));
+        updateBias(getAttribute("bias", 0.001f));
+        updateNoiseSize(getAttribute("noiseSize", 2));
         updateOutputSize(this.<Vector2i>getAttribute("outputSize"));
-        updateModels(this.<Collection<Model>>getAttribute("models"));
-        updateLight(this.<Vector3f>getAttribute("lightDirection"), camera);
+        updateModels(getAttribute("models", (Collection<Model>) Collections.EMPTY_LIST));
+        updateLight(getAttribute("lightDirection", Vector3f.ONE.negate()), camera);
     }
 
     private void updateCamera(Camera camera) {

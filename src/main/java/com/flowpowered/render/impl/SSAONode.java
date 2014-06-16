@@ -74,7 +74,6 @@ public class SSAONode extends GraphNode {
 
     public SSAONode(RenderGraph graph, String name) {
         super(graph, name);
-
         final Context context = graph.getContext();
         // Create the noise texture
         noiseTexture = context.newTexture();
@@ -112,10 +111,10 @@ public class SSAONode extends GraphNode {
     @Override
     public void update() {
         updateCamera(this.<Camera>getAttribute("camera"));
-        updateKernelSize(this.<Integer>getAttribute("kernelSize"), this.<Float>getAttribute("threshold"));
-        updateRadius(this.<Float>getAttribute("radius"));
-        updateNoiseSize(this.<Integer>getAttribute("noiseSize"));
-        updatePower(this.<Float>getAttribute("power"));
+        updateKernelSize(getAttribute("kernelSize", 8), getAttribute("threshold", 0.15f));
+        updateRadius(getAttribute("radius", 0.5f));
+        updateNoiseSize(getAttribute("noiseSize", 2));
+        updatePower(getAttribute("power", 2f));
         updateOutputSize(this.<Vector2i>getAttribute("outputSize"));
     }
 

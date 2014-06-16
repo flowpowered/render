@@ -133,8 +133,8 @@ public class BlurNode extends GraphNode {
 
     @Override
     public void update() {
-        updateKernelGenerator(this.<KernelGenerator>getAttribute("kernelGenerator"));
-        updateKernelSize(this.<Integer>getAttribute("kernelSize"));
+        updateKernelGenerator(getAttribute("kernelGenerator", GAUSSIAN_KERNEL));
+        updateKernelSize(getAttribute("kernelSize", 11));
         updateOutputSize(this.<Vector2i>getAttribute("outputSize"));
     }
 

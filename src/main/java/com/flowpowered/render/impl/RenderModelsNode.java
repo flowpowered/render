@@ -24,6 +24,7 @@
 package com.flowpowered.render.impl;
 
 import java.util.Collection;
+import java.util.Collections;
 
 import com.flowpowered.math.vector.Vector2i;
 import com.flowpowered.render.GraphNode;
@@ -102,10 +103,11 @@ public class RenderModelsNode extends GraphNode {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public void update() {
         updateCamera(this.<Camera>getAttribute("camera"));
         updateOutputSize(this.<Vector2i>getAttribute("outputSize"));
-        updateModels(this.<Collection<Model>>getAttribute("models"));
+        updateModels(getAttribute("models",  (Collection<Model>) Collections.EMPTY_LIST));
     }
 
     private void updateCamera(Camera camera) {

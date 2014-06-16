@@ -25,6 +25,7 @@ package com.flowpowered.render.impl;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 
 import com.flowpowered.math.vector.Vector2i;
 import com.flowpowered.render.GraphNode;
@@ -102,9 +103,10 @@ public class RenderTransparentModelsNode extends GraphNode {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public void update() {
         updateCamera(this.<Camera>getAttribute("camera"));
-        updateModels(this.<Collection<Model>>getAttribute("transparentModels"));
+        updateModels(getAttribute("transparentModels", (Collection<Model>) Collections.EMPTY_LIST));
     }
 
     private void updateCamera(Camera camera) {

@@ -68,15 +68,23 @@ public abstract class GraphNode implements AttributeHolder {
         attributes.put(name, value);
     }
 
+    public <T> T getAttribute(String name) {
+        return getAttribute(name, null);
+    }
+
     @Override
     @SuppressWarnings("unchecked")
-    public <T> T getAttribute(String name) {
+    public <T> T getAttribute(String name, T _default) {
         Object attribute = attributes.get(name);
         if (attribute == null) {
             attribute = graph.getAttributeRaw(name);
         }
         if (attribute == null) {
-            throw new IllegalArgumentException("Attribute \"" + name + "\" is missing or null");
+            if (_default == null) {
+                throw new IllegalArgumentException("Attribute \"" + name + "\" is missing or null and no default has been provided");
+            } else {
+                return _default;
+            }
         }
         try {
             return (T) attribute;

@@ -23,6 +23,7 @@
  */
 package com.flowpowered.render;
 
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -38,7 +39,12 @@ import org.spout.renderer.api.data.ShaderSource;
 import org.spout.renderer.api.gl.Context;
 import org.spout.renderer.api.gl.Program;
 import org.spout.renderer.api.gl.Shader;
+import org.spout.renderer.api.gl.Texture;
+import org.spout.renderer.api.gl.Texture.FilterMode;
+import org.spout.renderer.api.gl.Texture.Format;
+import org.spout.renderer.api.gl.Texture.InternalFormat;
 import org.spout.renderer.api.gl.VertexArray;
+import org.spout.renderer.api.util.CausticUtil;
 import org.spout.renderer.api.util.MeshGenerator;
 
 /**
@@ -49,6 +55,7 @@ public class RenderGraph extends Creatable implements AttributeHolder {
     private final String shaderSrcDir;
     private final Map<String, Program> programs = new HashMap<>();
     private final VertexArray screen;
+    private final Texture whiteDummy, blackDummy;
     private final Map<String, GraphNode> nodes = new HashMap<>();
     private final SortedSet<Stage> stages = new TreeSet<>();
     private final Map<String, Object> attributes = new HashMap<>();
@@ -57,6 +64,8 @@ public class RenderGraph extends Creatable implements AttributeHolder {
         this.context = context;
         this.shaderSrcDir = shaderSrcDir;
         screen = context.newVertexArray();
+        whiteDummy = context.newTexture();
+        blackDummy = context.newTexture();
     }
 
     @Override
@@ -64,8 +73,28 @@ public class RenderGraph extends Creatable implements AttributeHolder {
         if (isCreated()) {
             throw new IllegalStateException("Render graph has already been created");
         }
+        // Create the screen for deferred rendering
         screen.create();
         screen.setData(MeshGenerator.generatePlane(new Vector2f(2, 2)));
+        // Create a byte buffer to store the dummy texture data
+        final ByteBuffer buffer = CausticUtil.createByteBuffer(4);
+        // Create the white dummy
+        whiteDummy.create();
+        whiteDummy.setFormat(Format.RGBA, InternalFormat.RGBA8);
+        whiteDummy.setFilters(FilterMode.NEAREST, FilterMode.NEAREST);
+        buffer.putInt(0xFFFFFFFF);
+        buffer.flip();
+        whiteDummy.setImageData(buffer, 1, 1);
+        // Clear the buffer for the black dummy
+        buffer.clear();
+        // Create the black dummy
+        blackDummy.create();
+        blackDummy.setFormat(Format.RGBA, InternalFormat.RGBA8);
+        blackDummy.setFilters(FilterMode.NEAREST, FilterMode.NEAREST);
+        buffer.putInt(0x00000000);
+        buffer.flip();
+        blackDummy.setImageData(buffer, 1, 1);
+        // Set the state to created
         super.create();
     }
 
@@ -144,12 +173,20 @@ public class RenderGraph extends Creatable implements AttributeHolder {
         return attributes.get(name);
     }
 
+    public <T> T getAttribute(String name) {
+        return getAttribute(name, null);
+    }
+
     @Override
     @SuppressWarnings("unchecked")
-    public <T> T getAttribute(String name) {
+    public <T> T getAttribute(String name, T _default) {
         final Object attribute = getAttributeRaw(name);
         if (attribute == null) {
-            throw new IllegalArgumentException("Attribute \"" + name + "\" is missing or null");
+            if (_default == null) {
+                throw new IllegalArgumentException("Attribute \"" + name + "\" is missing or null and no default has been provided");
+            } else {
+                return _default;
+            }
         }
         try {
             return (T) attribute;
@@ -169,6 +206,14 @@ public class RenderGraph extends Creatable implements AttributeHolder {
 
     public VertexArray getScreen() {
         return screen;
+    }
+
+    public Texture getWhiteDummy() {
+        return whiteDummy;
+    }
+
+    public Texture getBlackDummy() {
+        return blackDummy;
     }
 
     public Program getProgram(String name) {

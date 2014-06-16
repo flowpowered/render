@@ -25,7 +25,9 @@ package com.flowpowered.render.impl;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 
+import com.flowpowered.math.vector.Vector2i;
 import com.flowpowered.render.GraphNode;
 import com.flowpowered.render.RenderGraph;
 
@@ -47,22 +49,32 @@ public class RenderGUINode extends GraphNode {
     private final SetCameraAction setCamera = new SetCameraAction(null);
     private final RenderModelsAction renderModels = new RenderModelsAction(null);
     private final Pipeline pipeline;
-    private final Rectangle inputSize = new Rectangle();
+    private final Rectangle outputSize = new Rectangle();
 
     public RenderGUINode(RenderGraph graph, String name) {
         super(graph, name);
         material = new Material(graph.getProgram("screen"));
         final Model model = new Model(graph.getScreen(), material);
-        pipeline = new PipelineBuilder().doAction(setCamera).useViewPort(inputSize).clearBuffer().renderModels(Arrays.asList(model)).doAction(renderModels).build();
+        pipeline = new PipelineBuilder().doAction(setCamera).useViewPort(outputSize).clearBuffer().renderModels(Arrays.asList(model)).doAction(renderModels).build();
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public void update() {
-        updateModels(this.<Collection<Model>>getAttribute("guiModels"));
+        updateModels(getAttribute("guiModels", (Collection<Model>) Collections.EMPTY_LIST));
+        updateOutputSize(this.<Vector2i>getAttribute("outputSize"));
     }
 
     private void updateModels(Collection<Model> models) {
         renderModels.setModels(models);
+    }
+
+    private void updateOutputSize(Vector2i size) {
+        if (size.getX() == outputSize.getWidth() && size.getY() == outputSize.getHeight()) {
+            return;
+        }
+        outputSize.setSize(size);
+        setCamera.setCamera(Camera.createOrthographic(1, 0, (float) size.getY() / size.getX(), 0, 0, 1));
     }
 
     @Override
@@ -77,11 +89,5 @@ public class RenderGUINode extends GraphNode {
     @Input("colors")
     public void setColorsInput(Texture colorsInput) {
         material.addTexture(0, colorsInput);
-        inputSize.setSize(colorsInput.getSize());
-        setCamera.setCamera(Camera.createOrthographic(1, 0, (float) colorsInput.getHeight() / colorsInput.getWidth(), 0, 0, 1));
-    }
-
-    public Camera getCamera() {
-        return setCamera.getCamera();
     }
 }

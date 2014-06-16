@@ -90,7 +90,7 @@ public class LightingNode extends GraphNode {
     @Override
     public void update() {
         updateCamera(this.<Camera>getAttribute("camera"));
-        updateLightDirection(this.<Vector3f>getAttribute("lightDirection"));
+        updateLightDirection(getAttribute("lightDirection", Vector3f.ONE.negate()));
         updateOutputSize(this.<Vector2i>getAttribute("outputSize"));
     }
 
