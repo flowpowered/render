@@ -18,7 +18,7 @@ uniform vec2 resolution;
 uniform bool direction;
 
 void main() {
-    outputColor = texture(colors, textureUV) * offsets[0];
+    outputColor = texture(colors, textureUV) * kernel[0];
     if (!direction) {
         for (int i = 1; i < kernelSize; i++) {
             vec2 offset = vec2(offsets[i], 0) / resolution.x;

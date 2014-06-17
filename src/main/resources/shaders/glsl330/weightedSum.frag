@@ -22,11 +22,11 @@ void main() {
 
     float diffuseTerm;
     float normalDotLight = max(0, dot(forwardNormalView, -lightDirectionView));
-    diffuseTerm = normalDotLight;
+    diffuseTerm = diffuseIntensity * normalDotLight;
 
     float specularTerm;
     if (normalDotLight > 0) {
-        specularTerm = pow(max(0, dot(reflect(-lightDirectionView, forwardNormalView), normalize(positionView))), shininess * 100);
+        specularTerm = specularIntensity * pow(max(0, dot(reflect(-lightDirectionView, forwardNormalView), normalize(positionView))), shininess * 100);
     } else {
         specularTerm = 0;
     }

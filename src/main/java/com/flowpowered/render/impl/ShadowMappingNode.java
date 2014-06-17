@@ -78,7 +78,7 @@ public class ShadowMappingNode extends GraphNode {
     private final Matrix4Uniform lightViewMatrixUniform = new Matrix4Uniform("lightViewMatrix", new Matrix4f());
     private final Matrix4Uniform lightProjectionMatrixUniform = new Matrix4Uniform("lightProjectionMatrix", new Matrix4f());
     protected final Camera camera = Camera.createOrthographic(50, -50, 50, -50, -50, 50);
-    protected final Rectangle shadowMapSize = new Rectangle(1024, 1024);
+    protected final Rectangle shadowMapSize = new Rectangle(1, 1);
     protected final Rectangle outputSize = new Rectangle();
     protected final RenderShadowModelsAction renderModelsAction = new RenderShadowModelsAction(null);
     protected final SetCameraAction setCameraAction = new SetCameraAction(null);
@@ -170,6 +170,7 @@ public class ShadowMappingNode extends GraphNode {
     }
 
     private void updateCamera(Camera camera) {
+        setCameraAction.setCamera(camera);
         // Update the field of view
         tanHalfFOVUniform.set(TrigMath.tan(RenderUtil.getFieldOfView(camera) / 2));
         // Update the planes
@@ -292,6 +293,8 @@ public class ShadowMappingNode extends GraphNode {
 
     @Override
     protected void render() {
+        final Texture depths = material.getTexture(1);
+        aspectRatioUniform.set((float) depths.getWidth() / depths.getHeight());
         inverseViewMatrixUniform.set(setCameraAction.getCamera().getViewMatrix().invert());
         lightViewMatrixUniform.set(camera.getViewMatrix());
         lightProjectionMatrixUniform.set(camera.getProjectionMatrix());
@@ -317,7 +320,6 @@ public class ShadowMappingNode extends GraphNode {
     public void setDepthsInput(Texture texture) {
         texture.checkCreated();
         material.addTexture(1, texture);
-        aspectRatioUniform.set((float) texture.getWidth() / texture.getHeight());
     }
 
     @Output("shadows")

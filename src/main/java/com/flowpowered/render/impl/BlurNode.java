@@ -44,7 +44,6 @@ import org.spout.renderer.api.gl.FrameBuffer.AttachmentPoint;
 import org.spout.renderer.api.gl.Program;
 import org.spout.renderer.api.gl.Texture;
 import org.spout.renderer.api.gl.Texture.FilterMode;
-import org.spout.renderer.api.gl.Texture.Format;
 import org.spout.renderer.api.gl.Texture.InternalFormat;
 import org.spout.renderer.api.gl.Texture.WrapMode;
 import org.spout.renderer.api.model.Model;
@@ -73,7 +72,6 @@ public class BlurNode extends GraphNode {
     private final Texture colorsOutput;
     private final Material horizontalMaterial;
     private final Pipeline pipeline;
-    private final Rectangle inputSize = new Rectangle();
     private final Rectangle outputSize = new Rectangle();
     private final IntUniform halfKernelSizeUniform = new IntUniform("kernelSize", 0);
     private final FloatArrayUniform kernelUniform = new FloatArrayUniform("kernel", new float[]{});
@@ -126,8 +124,9 @@ public class BlurNode extends GraphNode {
         verticalFrameBuffer.attach(AttachmentPoint.COLOR0, colorsOutput);
         // Create the pipeline
         pipeline = new PipelineBuilder()
-                .useViewPort(inputSize).bindFrameBuffer(horizontalFrameBuffer).renderModels(Arrays.asList(horizontalModel))
-                .useViewPort(outputSize).bindFrameBuffer(verticalFrameBuffer).renderModels(Arrays.asList(verticalModel))
+                .useViewPort(outputSize)
+                .bindFrameBuffer(horizontalFrameBuffer).renderModels(Arrays.asList(horizontalModel))
+                .bindFrameBuffer(verticalFrameBuffer).renderModels(Arrays.asList(verticalModel))
                 .unbindFrameBuffer(verticalFrameBuffer).build();
     }
 
@@ -135,7 +134,7 @@ public class BlurNode extends GraphNode {
     public void update() {
         updateKernelGenerator(getAttribute("kernelGenerator", GAUSSIAN_KERNEL));
         updateKernelSize(getAttribute("kernelSize", 11));
-        updateOutputSize(this.<Vector2i>getAttribute("outputSize"));
+        updateOutput(getAttribute("outputFormat", InternalFormat.RGBA8), this.<Vector2i>getAttribute("outputSize"));
     }
 
     private void updateKernelGenerator(KernelGenerator kernelGenerator) {
@@ -176,12 +175,16 @@ public class BlurNode extends GraphNode {
         offsetsUniform.set(offsets);
     }
 
-    private void updateOutputSize(Vector2i size) {
-        if (size.getX() == outputSize.getWidth() && size.getY() == outputSize.getHeight()) {
+    private void updateOutput(InternalFormat format, Vector2i size) {
+        if (format == colorsOutput.getInternalFormat() && size.getX() == outputSize.getWidth() && size.getY() == outputSize.getHeight()) {
             return;
         }
+        intermediateTexture.setFormat(format);
+        colorsOutput.setFormat(format);
+        intermediateTexture.setImageData(null, size.getX(), size.getY());
         colorsOutput.setImageData(null, size.getX(), size.getY());
         outputSize.setSize(size);
+        resolutionUniform.set(size.toFloat());
     }
 
     @Override
@@ -201,28 +204,6 @@ public class BlurNode extends GraphNode {
     public void setColorsInput(Texture texture) {
         texture.checkCreated();
         horizontalMaterial.addTexture(0, texture);
-        // Update the resolution uniform
-        final Vector2i size = texture.getSize();
-        inputSize.setSize(size);
-        resolutionUniform.set(size.toFloat());
-        // Get the format
-        final Format format = texture.getFormat();
-        final InternalFormat internalFormat = texture.getInternalFormat();
-        // Update the format if different
-        final boolean formatDifferent = format != colorsOutput.getFormat() || internalFormat != colorsOutput.getInternalFormat();
-        if (formatDifferent) {
-            colorsOutput.setFormat(format, internalFormat);
-            intermediateTexture.setFormat(format, internalFormat);
-            // Update the output texture data for the new format if needed
-            if (colorsOutput.getWidth() > 0 && colorsOutput.getHeight() > 0) {
-                colorsOutput.setImageData(null, colorsOutput.getWidth(), colorsOutput.getHeight());
-            }
-            // Update the intermediate texture data for the new format
-            intermediateTexture.setImageData(null, size.getX(), size.getY());
-        } else if (!intermediateTexture.getSize().equals(size)) {
-            // Update the intermediate texture size
-            intermediateTexture.setImageData(null, size.getX(), size.getY());
-        }
     }
 
     @Output("colors")

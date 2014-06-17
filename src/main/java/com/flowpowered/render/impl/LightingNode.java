@@ -99,7 +99,7 @@ public class LightingNode extends GraphNode {
     }
 
     private void updateLightDirection(Vector3f lightDirection) {
-        lightDirectionUniform.set(lightDirection);
+        lightDirectionUniform.set(lightDirection.normalize());
     }
 
     private void updateOutputSize(Vector2i size) {
@@ -112,6 +112,8 @@ public class LightingNode extends GraphNode {
 
     @Override
     protected void render() {
+        final Texture depths = material.getTexture(2);
+        aspectRatioUniform.set((float) depths.getWidth() / depths.getHeight());
         pipeline.run(graph.getContext());
     }
 
@@ -137,7 +139,6 @@ public class LightingNode extends GraphNode {
     public void setDepthsInput(Texture texture) {
         texture.checkCreated();
         material.addTexture(2, texture);
-        aspectRatioUniform.set((float) texture.getWidth() / texture.getHeight());
     }
 
     @Input("materials")

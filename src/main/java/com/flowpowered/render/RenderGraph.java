@@ -118,6 +118,12 @@ public class RenderGraph extends Creatable implements AttributeHolder {
         super.destroy();
     }
 
+    public void updateAll() {
+        for (GraphNode node : nodes.values()) {
+            node.update();
+        }
+    }
+
     public void build() {
         stages.clear();
         final Set<GraphNode> toBuild = new HashSet<>(nodes.values());

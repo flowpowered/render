@@ -11,7 +11,6 @@ varying vec3 viewRay;
 varying vec3 lightDirectionView;
 
 uniform mat4 viewMatrix;
-uniform mat4 normalMatrix;
 uniform vec3 lightDirection;
 uniform float tanHalfFOV;
 uniform float aspectRatio;
@@ -21,7 +20,7 @@ void main() {
 
     viewRay = vec3(position.x * tanHalfFOV * aspectRatio, position.y * tanHalfFOV, -1);
 
-    lightDirectionView = normalize((normalMatrix * vec4(lightDirection, 1)).xyz);
+    lightDirectionView = normalize((viewMatrix * vec4(lightDirection, 1)).xyz);
 
     gl_Position = vec4(position, 1);
 }

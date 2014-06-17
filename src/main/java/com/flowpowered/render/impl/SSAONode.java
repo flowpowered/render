@@ -191,6 +191,8 @@ public class SSAONode extends GraphNode {
 
     @Override
     protected void render() {
+        final Texture depths = material.getTexture(1);
+        aspectRatioUniform.set((float) depths.getWidth() / depths.getHeight());
         pipeline.run(graph.getContext());
     }
 
@@ -211,7 +213,6 @@ public class SSAONode extends GraphNode {
     public void setDepthsInput(Texture texture) {
         texture.checkCreated();
         material.addTexture(1, texture);
-        aspectRatioUniform.set((float) texture.getWidth() / texture.getHeight());
     }
 
     @Output("occlusions")
