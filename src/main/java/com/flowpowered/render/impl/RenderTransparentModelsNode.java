@@ -28,7 +28,6 @@ import java.util.Collection;
 import java.util.Collections;
 
 import com.flowpowered.math.vector.Vector2i;
-import com.flowpowered.math.vector.Vector3f;
 import com.flowpowered.render.GraphNode;
 import com.flowpowered.render.RenderGraph;
 
@@ -38,7 +37,6 @@ import org.spout.renderer.api.Camera;
 import org.spout.renderer.api.Material;
 import org.spout.renderer.api.Pipeline;
 import org.spout.renderer.api.Pipeline.PipelineBuilder;
-import org.spout.renderer.api.data.Uniform.Vector3Uniform;
 import org.spout.renderer.api.gl.Context;
 import org.spout.renderer.api.gl.Context.BlendFunction;
 import org.spout.renderer.api.gl.Context.Capability;
@@ -64,7 +62,6 @@ public class RenderTransparentModelsNode extends GraphNode {
     private final SetCameraAction setCamera = new SetCameraAction(null);
     private final Rectangle outputSize = new Rectangle();
     private final Pipeline pipeline;
-    private final Vector3Uniform lightDirectionUniform = new Vector3Uniform("lightDirection", Vector3f.UP.negate());
 
     public RenderTransparentModelsNode(RenderGraph graph, String name) {
         super(graph, name);
@@ -110,16 +107,11 @@ public class RenderTransparentModelsNode extends GraphNode {
     @SuppressWarnings("unchecked")
     public void update() {
         updateCamera(this.<Camera>getAttribute("camera"));
-        updateLightDirection(getAttribute("lightDirection", Vector3f.ONE.negate()));
         updateModels(getAttribute("transparentModels", (Collection<Model>) Collections.EMPTY_LIST));
     }
 
     private void updateCamera(Camera camera) {
         setCamera.setCamera(camera);
-    }
-
-    private void updateLightDirection(Vector3f lightDirection) {
-        lightDirectionUniform.set(lightDirection.normalize());
     }
 
     private void updateModels(Collection<Model> models) {
@@ -133,7 +125,7 @@ public class RenderTransparentModelsNode extends GraphNode {
         // Upload the light direction uniform
         final Program weightedSumProgram = graph.getProgram("weightedSum");
         weightedSumProgram.use();
-        weightedSumProgram.upload(lightDirectionUniform);
+        weightedSumProgram.setUniform("lightDirection", getAttribute("lightDirection", LightingNode.DEFAULT_LIGHT_DIRECTION));
         // Render
         pipeline.run(graph.getContext());
     }

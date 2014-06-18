@@ -75,8 +75,8 @@ public class ShadowMappingNode extends GraphNode {
     protected final FrameBuffer frameBuffer;
     private final Texture shadowsOutput;
     private final Matrix4Uniform inverseViewMatrixUniform = new Matrix4Uniform("inverseViewMatrix", new Matrix4f());
-    private final Matrix4Uniform lightViewMatrixUniform = new Matrix4Uniform("lightViewMatrix", new Matrix4f());
-    private final Matrix4Uniform lightProjectionMatrixUniform = new Matrix4Uniform("lightProjectionMatrix", new Matrix4f());
+    protected final Matrix4Uniform lightViewMatrixUniform = new Matrix4Uniform("lightViewMatrix", new Matrix4f());
+    protected final Matrix4Uniform lightProjectionMatrixUniform = new Matrix4Uniform("lightProjectionMatrix", new Matrix4f());
     protected final Camera camera = Camera.createOrthographic(50, -50, 50, -50, -50, 50);
     protected final Rectangle shadowMapSize = new Rectangle(1, 1);
     protected final Rectangle outputSize = new Rectangle();
@@ -86,7 +86,7 @@ public class ShadowMappingNode extends GraphNode {
     private final Vector2Uniform projectionUniform = new Vector2Uniform("projection", Vector2f.ZERO);
     private final FloatUniform aspectRatioUniform = new FloatUniform("aspectRatio", 1);
     private final FloatUniform tanHalfFOVUniform = new FloatUniform("tanHalfFOV", 1);
-    protected final Vector3Uniform lightDirectionUniform = new Vector3Uniform("lightDirection", Vector3f.UP.negate());
+    protected final Vector3Uniform lightDirectionUniform = new Vector3Uniform("lightDirection", LightingNode.DEFAULT_LIGHT_DIRECTION);
     private final IntUniform kernelSizeUniform = new IntUniform("kernelSize", 0);
     private final Vector2ArrayUniform kernelUniform = new Vector2ArrayUniform("kernel", new Vector2f[]{});
     private final Vector2Uniform noiseScaleUniform = new Vector2Uniform("noiseScale", Vector2f.ONE);
@@ -157,8 +157,7 @@ public class ShadowMappingNode extends GraphNode {
     @Override
     @SuppressWarnings("unchecked")
     public void update() {
-        final Camera camera = getAttribute("camera");
-        updateCamera(camera);
+        updateCamera(this.<Camera>getAttribute("camera"));
         updateShadowMapSize(getAttribute("shadowMapSize", new Vector2i(1024, 1024)));
         updateKernelSize(getAttribute("kernelSize", 8));
         updateRadius(getAttribute("radius", 0.05f));
@@ -166,7 +165,6 @@ public class ShadowMappingNode extends GraphNode {
         updateNoiseSize(getAttribute("noiseSize", 2));
         updateOutputSize(this.<Vector2i>getAttribute("outputSize"));
         updateModels(getAttribute("models", (Collection<Model>) Collections.EMPTY_LIST));
-        updateLight(getAttribute("lightDirection", Vector3f.ONE.negate()), camera);
     }
 
     private void updateCamera(Camera camera) {
@@ -174,10 +172,7 @@ public class ShadowMappingNode extends GraphNode {
         // Update the field of view
         tanHalfFOVUniform.set(TrigMath.tan(RenderUtil.getFieldOfView(camera) / 2));
         // Update the planes
-        final Vector2f planes = RenderUtil.getPlanes(camera);
-        final float nearPlane = planes.getX();
-        final float farPlane = planes.getY();
-        projectionUniform.set(new Vector2f(farPlane / (farPlane - nearPlane), (-farPlane * nearPlane) / (farPlane - nearPlane)));
+        projectionUniform.set(RenderUtil.computeProjection(RenderUtil.getPlanes(camera)));
     }
 
     protected void updateShadowMapSize(Vector2i size) {
@@ -248,16 +243,25 @@ public class ShadowMappingNode extends GraphNode {
         renderModelsAction.setModels(models);
     }
 
+    @Override
+    protected void render() {
+        final Texture depths = material.getTexture(1);
+        aspectRatioUniform.set((float) depths.getWidth() / depths.getHeight());
+        updateLightDirection(getAttribute("lightDirection", LightingNode.DEFAULT_LIGHT_DIRECTION), this.<Camera>getAttribute("camera"));
+        inverseViewMatrixUniform.set(setCameraAction.getCamera().getViewMatrix().invert());
+        pipeline.run(graph.getContext());
+    }
+
     /**
      * Updates the light direction and camera bounds to ensure that shadows are casted inside the camera's frustum.
      *
      * @param direction The light direction
      * @param camera The camera in which to cast shadows
      */
-    protected void updateLight(Vector3f direction, Camera camera) {
+    protected void updateLightDirection(Vector3f direction, Camera camera) {
+        // Update the camera frustum
         frustum.update(camera.getProjectionMatrix(), camera.getViewMatrix());
         // Set the direction uniform
-        direction = direction.normalize();
         lightDirectionUniform.set(direction);
         // Calculate the camera rotation from the direction and set
         final Quaternionf rotation = Quaternionf.fromRotationTo(Vector3f.FORWARD.negate(), direction);
@@ -289,16 +293,9 @@ public class ShadowMappingNode extends GraphNode {
         this.camera.setRotation(rotation);
         // Update the camera size
         this.camera.setProjection(Matrix4f.createOrthographic(size.getX(), -size.getX(), size.getY(), -size.getY(), -size.getZ(), size.getZ()));
-    }
-
-    @Override
-    protected void render() {
-        final Texture depths = material.getTexture(1);
-        aspectRatioUniform.set((float) depths.getWidth() / depths.getHeight());
-        inverseViewMatrixUniform.set(setCameraAction.getCamera().getViewMatrix().invert());
-        lightViewMatrixUniform.set(camera.getViewMatrix());
-        lightProjectionMatrixUniform.set(camera.getProjectionMatrix());
-        pipeline.run(graph.getContext());
+        // Update the uniforms for the new light camera
+        lightViewMatrixUniform.set(this.camera.getViewMatrix());
+        lightProjectionMatrixUniform.set(this.camera.getProjectionMatrix());
     }
 
     @Override

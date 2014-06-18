@@ -53,6 +53,7 @@ import org.spout.renderer.api.util.Rectangle;
  *
  */
 public class LightingNode extends GraphNode {
+    public static Vector3f DEFAULT_LIGHT_DIRECTION = Vector3f.ONE.negate().normalize();
     private final FrameBuffer frameBuffer;
     private final Texture colorsOutput;
     private final Material material;
@@ -60,7 +61,7 @@ public class LightingNode extends GraphNode {
     private final Rectangle outputSize = new Rectangle();
     private final FloatUniform aspectRatioUniform = new FloatUniform("aspectRatio", 1);
     private final FloatUniform tanHalfFOVUniform = new FloatUniform("tanHalfFOV", 1);
-    private final Vector3Uniform lightDirectionUniform = new Vector3Uniform("lightDirection", Vector3f.UP.negate());
+    private final Vector3Uniform lightDirectionUniform = new Vector3Uniform("lightDirection", DEFAULT_LIGHT_DIRECTION);
 
     public LightingNode(RenderGraph graph, String name) {
         super(graph, name);
@@ -90,16 +91,11 @@ public class LightingNode extends GraphNode {
     @Override
     public void update() {
         updateCamera(this.<Camera>getAttribute("camera"));
-        updateLightDirection(getAttribute("lightDirection", Vector3f.ONE.negate()));
         updateOutputSize(this.<Vector2i>getAttribute("outputSize"));
     }
 
     private void updateCamera(Camera camera) {
         tanHalfFOVUniform.set(TrigMath.tan(RenderUtil.getFieldOfView(camera) / 2));
-    }
-
-    private void updateLightDirection(Vector3f lightDirection) {
-        lightDirectionUniform.set(lightDirection.normalize());
     }
 
     private void updateOutputSize(Vector2i size) {
@@ -114,7 +110,12 @@ public class LightingNode extends GraphNode {
     protected void render() {
         final Texture depths = material.getTexture(2);
         aspectRatioUniform.set((float) depths.getWidth() / depths.getHeight());
+        updateLightDirection(getAttribute("lightDirection", DEFAULT_LIGHT_DIRECTION));
         pipeline.run(graph.getContext());
+    }
+
+    private void updateLightDirection(Vector3f lightDirection) {
+        lightDirectionUniform.set(lightDirection);
     }
 
     @Override

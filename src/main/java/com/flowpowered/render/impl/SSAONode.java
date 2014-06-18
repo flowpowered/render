@@ -122,10 +122,7 @@ public class SSAONode extends GraphNode {
         // Update the field of view
         tanHalfFOVUniform.set(TrigMath.tan(RenderUtil.getFieldOfView(camera) / 2));
         // Update the planes
-        final Vector2f planes = RenderUtil.getPlanes(camera);
-        final float nearPlane = planes.getX();
-        final float farPlane = planes.getY();
-        projectionUniform.set(new Vector2f(farPlane / (farPlane - nearPlane), (-farPlane * nearPlane) / (farPlane - nearPlane)));
+        projectionUniform.set(RenderUtil.computeProjection(RenderUtil.getPlanes(camera)));
     }
 
     private void updateKernelSize(int kernelSize, float threshold) {

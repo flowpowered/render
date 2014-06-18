@@ -111,11 +111,6 @@ public class CascadedShadowMappingNode extends ShadowMappingNode {
     }
 
     @Override
-    public void update() {
-        super.update();
-    }
-
-    @Override
     protected void updateShadowMapSize(Vector2i size) {
         if (size.getX() == shadowMapSize.getWidth() && size.getY() == shadowMapSize.getHeight()) {
             return;
@@ -127,10 +122,10 @@ public class CascadedShadowMappingNode extends ShadowMappingNode {
     }
 
     @Override
-    protected void updateLight(Vector3f direction, Camera camera) {
+    protected void updateLightDirection(Vector3f direction, Camera camera) {
+        // Update the camera frustum
         frustum.update(camera.getProjectionMatrix(), camera.getViewMatrix());
         // Set the direction uniform
-        direction = direction.normalize();
         lightDirectionUniform.set(direction);
         // Calculate the camera rotation from the direction and set
         final Quaternionf rotation = Quaternionf.fromRotationTo(Vector3f.FORWARD.negate(), direction);
@@ -181,15 +176,13 @@ public class CascadedShadowMappingNode extends ShadowMappingNode {
         vertices[7] = slice3Vertices[6];
         // Calculate the new camera bounds so that the box is fully included in those bounds
         fitFrustum(camera2, position, rotation, vertices);
-    }
-
-    @Override
-    protected void render() {
+        // Update the uniforms for the new light cameras
+        lightViewMatrixUniform.set(this.camera.getViewMatrix());
         lightViewMatrixUniform2.set(camera2.getViewMatrix());
         lightViewMatrixUniform3.set(camera3.getViewMatrix());
+        lightProjectionMatrixUniform.set(this.camera.getProjectionMatrix());
         lightProjectionMatrixUniform2.set(camera2.getProjectionMatrix());
         lightProjectionMatrixUniform3.set(camera3.getProjectionMatrix());
-        super.render();
     }
 
     @Override

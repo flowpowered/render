@@ -37,6 +37,14 @@ public final class RenderUtil {
     private RenderUtil() {
     }
 
+    public static Vector2f computeProjection(Vector2f planes) {
+        return computeProjection(planes.getX(), planes.getY());
+    }
+
+    public static Vector2f computeProjection(float near, float far) {
+        return new Vector2f(far / (far - near), (-far * near) / (far - near));
+    }
+
     public static Vector2f getPlanes(Camera camera) {
         return getPlanes(camera.getProjectionMatrix());
     }

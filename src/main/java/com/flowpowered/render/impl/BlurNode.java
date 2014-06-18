@@ -77,7 +77,6 @@ public class BlurNode extends GraphNode {
     private final FloatArrayUniform kernelUniform = new FloatArrayUniform("kernel", new float[]{});
     private final FloatArrayUniform offsetsUniform = new FloatArrayUniform("offsets", new float[]{});
     private final Vector2Uniform resolutionUniform = new Vector2Uniform("resolution", Vector2f.ONE);
-    private KernelGenerator kernelGenerator = GAUSSIAN_KERNEL;
 
     public BlurNode(RenderGraph graph, String name) {
         super(graph, name);
@@ -132,16 +131,11 @@ public class BlurNode extends GraphNode {
 
     @Override
     public void update() {
-        updateKernelGenerator(getAttribute("kernelGenerator", GAUSSIAN_KERNEL));
-        updateKernelSize(getAttribute("kernelSize", 11));
+        updateKernel(getAttribute("kernelGenerator", GAUSSIAN_KERNEL), getAttribute("kernelSize", 11));
         updateOutput(getAttribute("outputFormat", InternalFormat.RGBA8), this.<Vector2i>getAttribute("outputSize"));
     }
 
-    private void updateKernelGenerator(KernelGenerator kernelGenerator) {
-        this.kernelGenerator = kernelGenerator;
-    }
-
-    private void updateKernelSize(int kernelSize) {
+    private void updateKernel(KernelGenerator kernelGenerator, int kernelSize) {
         if ((kernelSize & 1) == 0) {
             kernelSize--;
         }
