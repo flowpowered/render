@@ -21,7 +21,7 @@ uniform sampler2D occlusions;
 uniform sampler2D shadows;
 uniform vec2 projection;
 uniform float lightAttenuation;
-uniform	float spotCutoff;
+uniform float spotCutoff;
 
 void main() {
     gl_FragColor = texture2D(colors, textureUV);
