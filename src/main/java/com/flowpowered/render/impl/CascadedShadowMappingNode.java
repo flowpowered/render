@@ -105,7 +105,7 @@ public class CascadedShadowMappingNode extends ShadowMappingNode {
                 .useCamera(camera).bindFrameBuffer(depthFrameBuffer).clearBuffer().doAction(renderModelsAction)
                 .useCamera(camera2).bindFrameBuffer(depthFrameBuffer2).clearBuffer().doAction(renderModelsAction)
                 .useCamera(camera3).bindFrameBuffer(depthFrameBuffer3).clearBuffer().doAction(renderModelsAction)
-                .useViewPort(outputSize).doAction(setCameraAction)
+                .useViewPort(outputSize)
                 .bindFrameBuffer(frameBuffer).renderModels(Arrays.asList(model))
                 .unbindFrameBuffer(frameBuffer).build();
     }

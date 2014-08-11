@@ -42,7 +42,6 @@ import com.flowpowered.render.RenderGraph;
 import com.flowpowered.render.RenderUtil;
 
 import org.spout.renderer.api.Action;
-import org.spout.renderer.api.Action.SetCameraAction;
 import org.spout.renderer.api.Camera;
 import org.spout.renderer.api.Material;
 import org.spout.renderer.api.Pipeline;
@@ -81,9 +80,9 @@ public class ShadowMappingNode extends GraphNode {
     protected final Rectangle shadowMapSize = new Rectangle(1, 1);
     protected final Rectangle outputSize = new Rectangle();
     protected final RenderShadowModelsAction renderModelsAction = new RenderShadowModelsAction(null);
-    protected final SetCameraAction setCameraAction = new SetCameraAction(null);
     protected Pipeline pipeline;
     private final Vector2Uniform projectionUniform = new Vector2Uniform("projection", Vector2f.ZERO);
+    private final Matrix4Uniform viewMatrixUniform = new Matrix4Uniform("viewMatrix", Matrix4f.IDENTITY);
     private final FloatUniform aspectRatioUniform = new FloatUniform("aspectRatio", 1);
     private final FloatUniform tanHalfFOVUniform = new FloatUniform("tanHalfFOV", 1);
     protected final Vector3Uniform lightDirectionUniform = new Vector3Uniform("lightDirection", LightingNode.DEFAULT_LIGHT_DIRECTION);
@@ -102,7 +101,7 @@ public class ShadowMappingNode extends GraphNode {
         // Create the pipeline
         pipeline = new PipelineBuilder()
                 .useViewPort(shadowMapSize).useCamera(camera).bindFrameBuffer(depthFrameBuffer).clearBuffer().doAction(renderModelsAction)
-                .useViewPort(outputSize).doAction(setCameraAction).bindFrameBuffer(frameBuffer).renderModels(Arrays.asList(model))
+                .useViewPort(outputSize).bindFrameBuffer(frameBuffer).renderModels(Arrays.asList(model))
                 .unbindFrameBuffer(frameBuffer).build();
     }
 
@@ -141,6 +140,7 @@ public class ShadowMappingNode extends GraphNode {
         material.addTexture(3, noiseTexture);
         final UniformHolder uniforms = material.getUniforms();
         uniforms.add(projectionUniform);
+        uniforms.add(viewMatrixUniform);
         uniforms.add(tanHalfFOVUniform);
         uniforms.add(aspectRatioUniform);
         uniforms.add(lightDirectionUniform);
@@ -161,14 +161,13 @@ public class ShadowMappingNode extends GraphNode {
         updateShadowMapSize(getAttribute("shadowMapSize", new Vector2i(1024, 1024)));
         updateKernelSize(getAttribute("kernelSize", 8));
         updateRadius(getAttribute("radius", 0.05f));
-        updateBias(getAttribute("bias", 0.001f));
+        updateBias(getAttribute("bias", 0.01f));
         updateNoiseSize(getAttribute("noiseSize", 2));
         updateOutputSize(this.<Vector2i>getAttribute("outputSize"));
         updateModels(getAttribute("models", (Collection<Model>) Collections.EMPTY_LIST));
     }
 
     private void updateCamera(Camera camera) {
-        setCameraAction.setCamera(camera);
         // Update the field of view
         tanHalfFOVUniform.set(TrigMath.tan(RenderUtil.getFieldOfView(camera) / 2));
         // Update the planes
@@ -247,8 +246,11 @@ public class ShadowMappingNode extends GraphNode {
     protected void render() {
         final Texture depths = material.getTexture(1);
         aspectRatioUniform.set((float) depths.getWidth() / depths.getHeight());
-        updateLightDirection(getAttribute("lightDirection", LightingNode.DEFAULT_LIGHT_DIRECTION), this.<Camera>getAttribute("camera"));
-        inverseViewMatrixUniform.set(setCameraAction.getCamera().getViewMatrix().invert());
+        final Camera camera = getAttribute("camera");
+        updateLightDirection(getAttribute("lightDirection", LightingNode.DEFAULT_LIGHT_DIRECTION), camera);
+        final Matrix4f viewMatrix = camera.getViewMatrix();
+        viewMatrixUniform.set(viewMatrix);
+        inverseViewMatrixUniform.set(viewMatrix.invert());
         pipeline.run(graph.getContext());
     }
 

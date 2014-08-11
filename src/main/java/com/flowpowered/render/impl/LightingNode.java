@@ -26,6 +26,7 @@ package com.flowpowered.render.impl;
 import java.util.Arrays;
 
 import com.flowpowered.math.TrigMath;
+import com.flowpowered.math.matrix.Matrix4f;
 import com.flowpowered.math.vector.Vector2i;
 import com.flowpowered.math.vector.Vector3f;
 import com.flowpowered.render.GraphNode;
@@ -37,6 +38,7 @@ import org.spout.renderer.api.Material;
 import org.spout.renderer.api.Pipeline;
 import org.spout.renderer.api.Pipeline.PipelineBuilder;
 import org.spout.renderer.api.data.Uniform.FloatUniform;
+import org.spout.renderer.api.data.Uniform.Matrix4Uniform;
 import org.spout.renderer.api.data.Uniform.Vector3Uniform;
 import org.spout.renderer.api.data.UniformHolder;
 import org.spout.renderer.api.gl.Context;
@@ -59,6 +61,7 @@ public class LightingNode extends GraphNode {
     private final Material material;
     private final Pipeline pipeline;
     private final Rectangle outputSize = new Rectangle();
+    private final Matrix4Uniform viewMatrixUniform = new Matrix4Uniform("viewMatrix", Matrix4f.IDENTITY);
     private final FloatUniform aspectRatioUniform = new FloatUniform("aspectRatio", 1);
     private final FloatUniform tanHalfFOVUniform = new FloatUniform("tanHalfFOV", 1);
     private final Vector3Uniform lightDirectionUniform = new Vector3Uniform("lightDirection", DEFAULT_LIGHT_DIRECTION);
@@ -79,6 +82,7 @@ public class LightingNode extends GraphNode {
         // Create the material
         material = new Material(graph.getProgram("lighting"));
         final UniformHolder uniforms = material.getUniforms();
+        uniforms.add(viewMatrixUniform);
         uniforms.add(aspectRatioUniform);
         uniforms.add(tanHalfFOVUniform);
         uniforms.add(lightDirectionUniform);
@@ -111,6 +115,7 @@ public class LightingNode extends GraphNode {
         final Texture depths = material.getTexture(2);
         aspectRatioUniform.set((float) depths.getWidth() / depths.getHeight());
         updateLightDirection(getAttribute("lightDirection", DEFAULT_LIGHT_DIRECTION));
+        viewMatrixUniform.set(this.<Camera>getAttribute("camera").getViewMatrix());
         pipeline.run(graph.getContext());
     }
 

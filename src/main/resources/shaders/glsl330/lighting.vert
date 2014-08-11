@@ -18,7 +18,7 @@ void main() {
 
     viewRay = vec3(position.x * tanHalfFOV * aspectRatio, position.y * tanHalfFOV, -1);
 
-    lightDirectionView = normalize((viewMatrix * vec4(lightDirection, 1)).xyz);
+    lightDirectionView = normalize((viewMatrix * vec4(lightDirection, 0)).xyz);
 
     gl_Position = vec4(position, 1);
 }

@@ -29,6 +29,7 @@ import java.util.Random;
 
 import com.flowpowered.math.GenericMath;
 import com.flowpowered.math.TrigMath;
+import com.flowpowered.math.matrix.Matrix4f;
 import com.flowpowered.math.vector.Vector2f;
 import com.flowpowered.math.vector.Vector2i;
 import com.flowpowered.math.vector.Vector3f;
@@ -42,6 +43,7 @@ import org.spout.renderer.api.Pipeline;
 import org.spout.renderer.api.Pipeline.PipelineBuilder;
 import org.spout.renderer.api.data.Uniform.FloatUniform;
 import org.spout.renderer.api.data.Uniform.IntUniform;
+import org.spout.renderer.api.data.Uniform.Matrix4Uniform;
 import org.spout.renderer.api.data.Uniform.Vector2Uniform;
 import org.spout.renderer.api.data.Uniform.Vector3ArrayUniform;
 import org.spout.renderer.api.data.UniformHolder;
@@ -63,6 +65,7 @@ public class SSAONode extends GraphNode {
     private final Pipeline pipeline;
     private final Rectangle outputSize = new Rectangle();
     private final Vector2Uniform projectionUniform = new Vector2Uniform("projection", Vector2f.ZERO);
+    private final Matrix4Uniform projectionMatrixUniform = new Matrix4Uniform("projectionMatrix", Matrix4f.IDENTITY);
     private final FloatUniform aspectRatioUniform = new FloatUniform("aspectRatio", 1);
     private final FloatUniform tanHalfFOVUniform = new FloatUniform("tanHalfFOV", 1);
     private final IntUniform kernelSizeUniform = new IntUniform("kernelSize", 0);
@@ -94,6 +97,7 @@ public class SSAONode extends GraphNode {
         material.addTexture(2, noiseTexture);
         final UniformHolder uniforms = material.getUniforms();
         uniforms.add(projectionUniform);
+        uniforms.add(projectionMatrixUniform);
         uniforms.add(tanHalfFOVUniform);
         uniforms.add(aspectRatioUniform);
         uniforms.add(kernelSizeUniform);
@@ -190,6 +194,7 @@ public class SSAONode extends GraphNode {
     protected void render() {
         final Texture depths = material.getTexture(1);
         aspectRatioUniform.set((float) depths.getWidth() / depths.getHeight());
+        projectionMatrixUniform.set(this.<Camera>getAttribute("camera").getProjectionMatrix());
         pipeline.run(graph.getContext());
     }
 
