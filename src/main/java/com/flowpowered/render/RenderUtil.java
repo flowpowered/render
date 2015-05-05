@@ -28,7 +28,7 @@ import com.flowpowered.math.TrigMath;
 import com.flowpowered.math.matrix.Matrix4f;
 import com.flowpowered.math.vector.Vector2f;
 
-import org.spout.renderer.api.Camera;
+import com.flowpowered.caustic.api.Camera;
 
 /**
  *

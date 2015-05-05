@@ -33,7 +33,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import org.spout.renderer.api.gl.Texture;
+import com.flowpowered.caustic.api.gl.Texture;
 
 /**
  *

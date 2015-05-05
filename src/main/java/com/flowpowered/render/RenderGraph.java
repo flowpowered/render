@@ -34,18 +34,18 @@ import java.util.TreeSet;
 
 import com.flowpowered.math.vector.Vector2f;
 
-import org.spout.renderer.api.Creatable;
-import org.spout.renderer.api.data.ShaderSource;
-import org.spout.renderer.api.gl.Context;
-import org.spout.renderer.api.gl.Program;
-import org.spout.renderer.api.gl.Shader;
-import org.spout.renderer.api.gl.Texture;
-import org.spout.renderer.api.gl.Texture.FilterMode;
-import org.spout.renderer.api.gl.Texture.Format;
-import org.spout.renderer.api.gl.Texture.InternalFormat;
-import org.spout.renderer.api.gl.VertexArray;
-import org.spout.renderer.api.util.CausticUtil;
-import org.spout.renderer.api.util.MeshGenerator;
+import com.flowpowered.caustic.api.Creatable;
+import com.flowpowered.caustic.api.data.ShaderSource;
+import com.flowpowered.caustic.api.gl.Context;
+import com.flowpowered.caustic.api.gl.Program;
+import com.flowpowered.caustic.api.gl.Shader;
+import com.flowpowered.caustic.api.gl.Texture;
+import com.flowpowered.caustic.api.gl.Texture.FilterMode;
+import com.flowpowered.caustic.api.gl.Texture.Format;
+import com.flowpowered.caustic.api.gl.Texture.InternalFormat;
+import com.flowpowered.caustic.api.gl.VertexArray;
+import com.flowpowered.caustic.api.util.CausticUtil;
+import com.flowpowered.caustic.api.util.MeshGenerator;
 
 /**
  *
